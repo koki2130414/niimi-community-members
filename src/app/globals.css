@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-brand-cream text-brand-green-dark antialiased;
+}
+
+/* 記事本文（bodyHtml）のスタイル。管理者が入力したリッチテキストを見やすく整形する */
+.prose-article h2 {
+  @apply text-xl font-bold mt-6 mb-2 text-brand-green-dark;
+}
+.prose-article h3 {
+  @apply text-lg font-bold mt-4 mb-2 text-brand-green-dark;
+}
+.prose-article p {
+  @apply mb-4 leading-relaxed;
+}
+.prose-article ul {
+  @apply list-disc pl-5 mb-4;
+}
+.prose-article a {
+  @apply text-brand-green underline;
+}
+.prose-article blockquote {
+  @apply border-l-4 border-brand-gold pl-4 italic text-brand-green-light my-4;
+}
+.prose-article img {
+  @apply rounded-card my-4 max-w-full;
+}
+.prose-article hr {
+  @apply border-brand-beige my-6;
+}

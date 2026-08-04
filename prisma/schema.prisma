@@ -1,0 +1,449 @@
+// にいみコミュニティ メンバーズ - データベーススキーマ
+//
+// 設計方針:
+// - 個人情報は最小限（氏名・表示名・メールのみ）に絞り、住所や電話番号は収集しない
+// - パスワードは平文で保存せず bcrypt ハッシュのみを保持する（passwordHashカラム）
+// - 会員・コンテンツは可能な限り論理削除（deletedAt / isActive）とし、誤操作からの復旧余地を残す
+// - 会員種別(MembershipPlan)は各コンテンツに配列で許可リストを持たせ、階層でなく明示的に判定する
+// - 将来のOAuth(Google/LINE)ログイン拡張に備え、Auth.js標準の Account / Session モデルを採用する
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // 開発環境: SQLite / 本番環境: PostgreSQL を想定（DATABASE_URLを切り替えるだけで移行可能）
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────
+// 認証・会員
+// ─────────────────────────────────────────
+
+enum MembershipPlan {
+  FREE // 無料会員
+  STANDARD // 通常会員
+  PREMIUM // プレミアム会員
+  ADMIN // 管理者
+}
+
+enum MemberStatus {
+  ACTIVE // 有効
+  SUSPENDED // 一時停止
+  WITHDRAWN // 退会
+  EXPIRED // 有効期限切れ
+}
+
+// Auth.js が要求する User モデル。認証の本体。
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+
+  // ログイン用ID（メールアドレスと別に発行可能。会員ごとに個別発行し、使い回さない）
+  loginId      String @unique
+  passwordHash String // bcryptハッシュのみ保持。平文は一切保存しない。
+
+  name        String // 氏名（管理者のみ閲覧可能な想定の項目は将来 MemberProfile 側で分離)
+  displayName String // 表示画面に出す名前（挨拶等に使用）
+
+  membershipPlan MembershipPlan @default(FREE)
+  status         MemberStatus   @default(ACTIVE)
+
+  registeredAt DateTime  @default(now())
+  expiresAt    DateTime? // 有効期限（nullは無期限）
+  lastLoginAt  DateTime?
+
+  // ログイン失敗回数・ロック（ブルートフォース対策）
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
+
+  // 仮パスワード発行時にtrue。ログイン後に変更を促す
+  mustChangePassword Boolean @default(false)
+
+  mustResetToken       String? @unique // パスワード再設定用トークン
+  mustResetTokenExpiry DateTime?
+
+  deletedAt DateTime? // 論理削除（退会等）
+
+  profile MemberProfile?
+
+  accounts Account[]
+  sessions Session[]
+
+  videoViews       VideoView[]
+  videoFavorites   VideoFavorite[]
+  articleViews     ArticleView[]
+  articleFavorites ArticleFavorite[]
+  announcementReads AnnouncementRead[]
+  downloadLogs     DownloadLog[]
+  adminLogs        AdminLog[] @relation("AdminLogActor")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([membershipPlan])
+  @@index([expiresAt])
+}
+
+// 管理者メモなど、User本体から分離したい付加情報
+model MemberProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  adminNote String? // 管理者専用メモ（会員本人には非公開）
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// 会員種別マスタ（表示名・説明・将来の月額料金などを管理画面から編集できるようにする）
+model MembershipPlanConfig {
+  id          String         @id @default(cuid())
+  plan        MembershipPlan @unique
+  label       String // 画面表示名（例: 「プレミアム会員」）
+  description String?
+  monthlyFee  Int? // 将来の有料化に備えたフィールド（現状は未使用）
+  sortOrder   Int            @default(0)
+}
+
+// Auth.js Adapter 標準モデル（将来のGoogle/LINEログイン拡張のため必須）
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+// DBセッション方式（セッション固定攻撃対策としてログイン時に必ず新規発行する）
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────
+// 動画
+// ─────────────────────────────────────────
+
+model VideoCategory {
+  id        String  @id @default(cuid())
+  name      String  @unique
+  sortOrder Int     @default(0)
+  videos    Video[]
+}
+
+model Video {
+  id          String   @id @default(cuid())
+  title       String
+  thumbnailUrl String?
+  youtubeUrl  String
+  youtubeId   String
+  description String?
+  tags        String? // カンマ区切り（MVPでは簡易実装。将来的にタグテーブルへ正規化可）
+
+  categoryId String?
+  category   VideoCategory? @relation(fields: [categoryId], references: [id])
+
+  publishedAt DateTime?
+  isPublished Boolean   @default(false)
+  isFeatured  Boolean   @default(false) // おすすめ設定
+
+  // このコンテンツを閲覧できる会員種別（カンマ区切りで保持しアプリ層でパース）
+  allowedPlans String @default("FREE,STANDARD,PREMIUM,ADMIN")
+
+  deletedAt DateTime?
+
+  views      VideoView[]
+  favorites  VideoFavorite[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isPublished, publishedAt])
+  @@index([categoryId])
+}
+
+model VideoView {
+  id       String   @id @default(cuid())
+  userId   String
+  videoId  String
+  viewedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+  @@index([videoId])
+}
+
+model VideoFavorite {
+  id      String @id @default(cuid())
+  userId  String
+  videoId String
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, videoId])
+  @@index([videoId])
+}
+
+// ─────────────────────────────────────────
+// ブログ・記事
+// ─────────────────────────────────────────
+
+model ArticleCategory {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  sortOrder Int       @default(0)
+  articles  Article[]
+}
+
+model Article {
+  id           String   @id @default(cuid())
+  title        String
+  eyecatchUrl  String?
+  bodyHtml     String // サニタイズ済みHTML（保存前にDOMPurifyでサニタイズ）
+  summary      String?
+  tags         String?
+  authorName   String?
+
+  categoryId String?
+  category   ArticleCategory? @relation(fields: [categoryId], references: [id])
+
+  publishedAt DateTime?
+  isPublished Boolean   @default(false)
+  isFeatured  Boolean   @default(false)
+
+  allowedPlans String @default("FREE,STANDARD,PREMIUM,ADMIN")
+
+  deletedAt DateTime?
+
+  views     ArticleView[]
+  favorites ArticleFavorite[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isPublished, publishedAt])
+  @@index([categoryId])
+}
+
+model ArticleView {
+  id        String   @id @default(cuid())
+  userId    String
+  articleId String
+  viewedAt  DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId])
+  @@index([articleId])
+}
+
+model ArticleFavorite {
+  id        String @id @default(cuid())
+  userId    String
+  articleId String
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, articleId])
+  @@index([articleId])
+}
+
+// ─────────────────────────────────────────
+// お知らせ
+// ─────────────────────────────────────────
+
+enum AnnouncementImportance {
+  NORMAL
+  IMPORTANT
+}
+
+model Announcement {
+  id          String                  @id @default(cuid())
+  title       String
+  bodyHtml    String
+  publishedAt DateTime?
+  importance  AnnouncementImportance  @default(NORMAL)
+  isPublished Boolean                 @default(false)
+  allowedPlans String @default("FREE,STANDARD,PREMIUM,ADMIN")
+
+  deletedAt DateTime?
+
+  reads AnnouncementRead[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isPublished, publishedAt])
+}
+
+model AnnouncementRead {
+  id              String   @id @default(cuid())
+  userId          String
+  announcementId  String
+  readAt          DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  announcement Announcement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, announcementId])
+}
+
+// ─────────────────────────────────────────
+// 特典
+// ─────────────────────────────────────────
+
+model Benefit {
+  id          String    @id @default(cuid())
+  title       String
+  summary     String?
+  detailHtml  String?
+  conditions  String?
+  couponCode  String?
+  howTo       String?
+  imageUrl    String?
+  validUntil  DateTime? // 期限切れは isPublished に関わらず自動で「終了」表示にする
+  isPublished Boolean   @default(false)
+  allowedPlans String @default("FREE,STANDARD,PREMIUM,ADMIN")
+
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isPublished, validUntil])
+}
+
+// ─────────────────────────────────────────
+// イベント
+// ─────────────────────────────────────────
+
+enum EventStatus {
+  UPCOMING // 受付前
+  OPEN // 受付中
+  FULL // 満員
+  CLOSED // 受付終了
+  FINISHED // 開催終了
+  CANCELED // 中止
+}
+
+model Event {
+  id            String      @id @default(cuid())
+  title         String
+  startsAt      DateTime
+  endsAt        DateTime?
+  location      String?
+  onlineUrl     String?
+  summary       String?
+  capacity      Int?
+  fee           String?
+  applyDeadline DateTime?
+  applyUrl      String? // Googleフォーム等の外部申込リンク（将来サイト内申込に拡張可能な設計）
+  eyecatchUrl   String?
+  status        EventStatus @default(UPCOMING)
+  allowedPlans  String @default("FREE,STANDARD,PREMIUM,ADMIN")
+
+  deletedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, startsAt])
+}
+
+// ─────────────────────────────────────────
+// ダウンロード資料
+// ─────────────────────────────────────────
+
+model DownloadMaterial {
+  id            String   @id @default(cuid())
+  title         String
+  description   String?
+  // ファイルは推測されにくいランダムキーで保存し、配信APIはログイン必須にする
+  fileStorageKey String
+  fileName      String
+  thumbnailUrl  String?
+  category      String?
+  publishedAt   DateTime?
+  isPublished   Boolean  @default(false)
+  allowedPlans  String @default("FREE,STANDARD,PREMIUM,ADMIN")
+  downloadCount Int      @default(0)
+
+  deletedAt DateTime?
+
+  logs DownloadLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DownloadLog {
+  id           String   @id @default(cuid())
+  userId       String
+  materialId   String
+  downloadedAt DateTime @default(now())
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  material DownloadMaterial @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@index([materialId])
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────
+// 管理ログ・サイト設定
+// ─────────────────────────────────────────
+
+model AdminLog {
+  id        String   @id @default(cuid())
+  actorId   String // 操作した管理者
+  action    String // 例: "member.create", "member.suspend", "article.publish"
+  targetType String? // 例: "User", "Article"
+  targetId   String?
+  detail    String? // JSON文字列で詳細を保持
+  createdAt DateTime @default(now())
+
+  actor User @relation("AdminLogActor", fields: [actorId], references: [id])
+
+  @@index([actorId])
+  @@index([action])
+}
+
+// サービス名・カラー設定など、管理画面から変更可能な設定値をKVS的に保持
+model SiteSetting {
+  id    String @id @default(cuid())
+  key   String @unique // 例: "site.name", "theme.primaryColor"
+  value String
+  updatedAt DateTime @updatedAt
+}
