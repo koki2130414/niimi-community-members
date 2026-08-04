@@ -11,7 +11,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   // セッション固定攻撃対策: DBセッション方式を採用し、ログインの都度サーバー側で
   // 新しいセッショントークンを発行する（JWTのクライアント側再利用を避ける）。
-  session: { strategy: "database" },
+  session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
   },
@@ -73,17 +73,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async session({ session, user }) {
-      // セッションに会員種別・ステータス等を載せ、各画面/APIでの権限判定に使う。
-      const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
-      if (dbUser && session.user) {
-        session.user.id = dbUser.id;
-        session.user.membershipPlan = dbUser.membershipPlan;
-        session.user.status = dbUser.status;
-        session.user.displayName = dbUser.displayName;
-        session.user.mustChangePassword = dbUser.mustChangePassword;
-      }
-      return session;
-    },
+        // 初回サインイン時のみ user が渡される。以降のリクエストでは token だけが渡されるため、
+        // 会員種別などの判定に必要な情報を token に載せておく。
+        async jwt({ token, user }) {
+                if (user) {
+                          token.userId = user.id;
+                }
+                return token;
+        },
+        async session({ session, token }) {
+                // セッションに会員種別・ステータス等を載せ、各画面/APIでの権限判定に使う。
+                const userId = token.userId as string | undefined;
+                if (!userId) return session;
+                const dbUser = await prisma.user.findUnique({ where: { id: userId } });
+                if (dbUser && session.user) {
+                          session.user.id = dbUser.id;
+                          session.user.membershipPlan = dbUser.membershipPlan;
+                          session.user.status = dbUser.status;
+                          session.user.displayName = dbUser.displayName;
+                          session.user.mustChangePassword = dbUser.mustChangePassword;
+                }
+                return session;
+        },
   },
 });
