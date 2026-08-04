@@ -11,6 +11,8 @@ const NAV_ITEMS = [
   { href: "/member/announcements", label: "お知らせ" },
 ];
 
+const NOTE_URL = "https://note.com/koki213";
+
 export function MemberHeader({ siteName, displayName }: { siteName: string; displayName: string }) {
   return (
     <header className="sticky top-0 z-20 border-b border-brand-beige bg-white/95 backdrop-blur">
@@ -28,6 +30,14 @@ export function MemberHeader({ siteName, displayName }: { siteName: string; disp
               {item.label}
             </Link>
           ))}
+          <a
+              href={NOTE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-brand-green-dark hover:text-brand-gold"
+            >
+            Note
+          </a>
         </nav>
         <div className="hidden items-center gap-3 md:flex">
           <Link href="/member/mypage" className="text-sm font-medium text-brand-green-dark hover:text-brand-gold">
