@@ -17,6 +17,13 @@ const NAV_GROUPS = [
     ],
   },
   {
+    heading: "コミュニティ管理",
+    items: [
+      { href: "/admin/chat", label: "チャット管理", icon: "💬" },
+      { href: "/admin/messages", label: "メッセージ監視", icon: "🔍" },
+    ],
+  },
+  {
     heading: "システム",
     items: [{ href: "/admin/settings", label: "サイト設定", icon: "⚙️" }],
   },

@@ -95,6 +95,8 @@ model User {
   podcastFavorites  PodcastFavorite[]    @relation("PodcastFavorites")
   matchingPosts     MatchingPost[]       @relation("MatchingPosts")
   jobApplications   JobApplication[]     @relation("JobApplications")
+  dmParticipants    DmParticipant[]      @relation("DmParticipants")
+  dmMessages        DmMessage[]          @relation("DmMessages")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -750,3 +752,37 @@ model JobApplication {
 
   @@index([jobId])
 }
+
+// ─────────────────────────────────────────
+// 会員間ダイレクトメッセージ（管理者はすべて閲覧可能）
+// ─────────────────────────────────────────
+model DmThread {
+  id           String          @id @default(cuid())
+  createdAt    DateTime        @default(now())
+  participants DmParticipant[]
+  messages     DmMessage[]
+}
+
+model DmParticipant {
+  threadId  String
+  thread    DmThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("DmParticipants", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([threadId, userId])
+}
+
+model DmMessage {
+  id        String    @id @default(cuid())
+  threadId  String
+  thread    DmThread  @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User      @relation("DmMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  body      String
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([threadId, createdAt])
+}
+

@@ -144,6 +144,7 @@ function SectionMenu() {
     { href: "/member/materials", label: "資料", icon: "📁" },
     { href: "/member/announcements", label: "お知らせ", icon: "📣" },
     { href: "/member/chat", label: "チャット", icon: "💬" },
+    { href: "/member/messages", label: "メッセージ", icon: "✉️" },
     { href: "/member/points", label: "ポイント", icon: "⭐" },
     { href: "/member/courses/ai", label: "AI講座", icon: "🤖" },
     { href: "/member/courses/psychology", label: "心理学", icon: "🧠" },

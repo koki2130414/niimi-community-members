@@ -192,3 +192,48 @@ export async function markLessonComplete(courseId: string, lessonId: string, tot
   }
   revalidatePath(`/member/courses`);
 }
+
+// ---------------- 会員間メッセージ（DM） ----------------
+
+/** 指定した会員との1対1スレッドを取得、なければ作成して返す。 */
+export async function findOrCreateDmThread(otherUserId: string): Promise<string> {
+  const session = await requireMemberSession();
+  if (otherUserId === session.user.id) throw new Error("自分自身にはメッセージを送れません");
+
+  const existing = await prisma.dmThread.findFirst({
+    where: {
+      participants: { some: { userId: session.user.id } },
+      AND: { participants: { some: { userId: otherUserId } } },
+    },
+    select: { id: true, _count: { select: { participants: true } } },
+  });
+  // 2人だけのスレッドに限定する（誤って3人以上のスレッドを拾わないように）
+  if (existing && existing._count.participants === 2) {
+    return existing.id;
+  }
+
+  const thread = await prisma.dmThread.create({
+    data: {
+      participants: {
+        create: [{ userId: session.user.id }, { userId: otherUserId }],
+      },
+    },
+  });
+  return thread.id;
+}
+
+export async function sendDmMessage(threadId: string, formData: FormData) {
+  const session = await requireMemberSession();
+  const body = String(formData.get("body") ?? "").trim();
+  if (!body) return;
+
+  const participant = await prisma.dmParticipant.findUnique({
+    where: { threadId_userId: { threadId, userId: session.user.id } },
+  });
+  if (!participant) return; // 参加者以外は送信不可
+
+  await prisma.dmMessage.create({ data: { threadId, senderId: session.user.id, body } });
+  revalidatePath(`/member/messages/${threadId}`);
+  revalidatePath(`/member/messages`);
+}
+
