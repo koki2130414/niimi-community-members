@@ -5,6 +5,7 @@ import { canViewContent } from "@/lib/permissions";
 import { EVENT_STATUS_LABELS } from "@/lib/content-status";
 import { formatDateTime } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
+import { toggleEventRsvp } from "@/lib/actions/ippos-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,16 @@ export default async function EventDetailPage({ params }: { params: { id: string
   }
 
   const canApply = event.status === "OPEN" && event.applyUrl;
+
+  const [myRsvp, goingCount] = await Promise.all([
+    prisma.eventRsvp.findUnique({ where: { eventId_userId: { eventId: event!.id, userId: session.user.id } } }),
+    prisma.eventRsvp.count({ where: { eventId: event!.id, status: "going" } }),
+  ]);
+  const isGoing = myRsvp?.status === "going";
+  const rsvpAction = async () => {
+    "use server";
+    await toggleEventRsvp(event!.id);
+  };
 
   return (
     <div className="space-y-4">
@@ -47,6 +58,18 @@ export default async function EventDetailPage({ params }: { params: { id: string
       </dl>
 
       {event.summary && <p className="whitespace-pre-wrap text-sm text-brand-green-dark">{event.summary}</p>}
+
+      <form action={rsvpAction}>
+        <button
+          type="submit"
+          className={`w-full rounded-card px-4 py-3 text-center text-sm font-bold ${
+            isGoing ? "bg-brand-gold-light text-brand-green-dark" : "bg-brand-green text-white hover:bg-brand-green-dark"
+          }`}
+        >
+          {isGoing ? "参加登録済みです ✓" : "サイト内で参加登録する（+50pt）"}
+        </button>
+      </form>
+      <p className="text-center text-xs text-brand-green-light">{goingCount}人が参加登録中</p>
 
       {canApply && (
         <a

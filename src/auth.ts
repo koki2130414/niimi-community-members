@@ -64,6 +64,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           data: { ...stateAfterSuccessfulLogin(), lastLoginAt: new Date() },
         });
 
+        // ログインボーナス（1日1回まで）
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const alreadyAwardedToday = await prisma.pointEvent.findFirst({
+          where: { userId: user.id, reason: "login", createdAt: { gte: todayStart } },
+        });
+        if (!alreadyAwardedToday) {
+          await prisma.pointEvent.create({ data: { userId: user.id, amount: 5, reason: "login" } });
+        }
+
         return {
           id: user.id,
           email: user.email,

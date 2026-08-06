@@ -5,6 +5,7 @@ import { canViewContent } from "@/lib/permissions";
 import { ContentCard } from "@/components/member/ContentCard";
 import { AnnouncementBanner } from "@/components/member/AnnouncementBanner";
 import { formatDate } from "@/lib/format";
+import { getPointBalance } from "@/lib/points";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,7 @@ export default async function MemberHomePage() {
   const session = await requireMemberSession();
   const plan = session.user.membershipPlan;
 
-  const [announcements, videos, articles, events, benefits] = await Promise.all([
+  const [announcements, videos, articles, events, benefits, pointBalance] = await Promise.all([
     prisma.announcement.findMany({
       where: { isPublished: true, deletedAt: null },
       orderBy: { publishedAt: "desc" },
@@ -38,6 +39,7 @@ export default async function MemberHomePage() {
       orderBy: { createdAt: "desc" },
       take: 4,
     }),
+    getPointBalance(session.user.id),
   ]);
 
   const visibleAnnouncements = announcements.filter((a) => canViewContent(plan, a.allowedPlans));
@@ -62,6 +64,17 @@ export default async function MemberHomePage() {
           href={`/member/announcements/${importantAnnouncement.id}`}
         />
       )}
+
+      <Link
+        href="/member/points"
+        className="flex items-center justify-between rounded-card border border-brand-beige bg-white p-4 transition hover:border-brand-gold"
+      >
+        <div>
+          <p className="text-xs font-semibold text-brand-green-light">IPPOS Point</p>
+          <p className="text-2xl font-bold text-brand-green">{pointBalance}pt</p>
+        </div>
+        <span className="text-xs font-semibold text-brand-green">履歴・ランキングを見る →</span>
+      </Link>
 
       <SectionMenu />
 
@@ -130,6 +143,16 @@ function SectionMenu() {
     { href: "/member/events", label: "イベント", icon: "📅" },
     { href: "/member/materials", label: "資料", icon: "📁" },
     { href: "/member/announcements", label: "お知らせ", icon: "📣" },
+    { href: "/member/chat", label: "チャット", icon: "💬" },
+    { href: "/member/points", label: "ポイント", icon: "⭐" },
+    { href: "/member/courses/ai", label: "AI講座", icon: "🤖" },
+    { href: "/member/courses/psychology", label: "心理学", icon: "🧠" },
+    { href: "/member/courses/agriculture", label: "農業講座", icon: "🌾" },
+    { href: "/member/steps", label: "一歩記録", icon: "👣" },
+    { href: "/member/challenges", label: "挑戦宣言", icon: "🎯" },
+    { href: "/member/podcast", label: "Podcast", icon: "🎙️" },
+    { href: "/member/matching", label: "マッチング", icon: "🤝" },
+    { href: "/member/jobs", label: "求人", icon: "💼" },
   ];
   return (
     <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">

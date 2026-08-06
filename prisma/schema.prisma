@@ -82,6 +82,20 @@ model User {
   downloadLogs     DownloadLog[]
   adminLogs        AdminLog[] @relation("AdminLogActor")
 
+  pointEvents       PointEvent[]         @relation("PointEvents")
+  chatMessages      ChatMessage[]        @relation("ChatMessages")
+  chatReactions     ChatReaction[]       @relation("ChatReactions")
+  courseProgress    CourseProgress[]     @relation("CourseProgress")
+  eventRsvps        EventRsvp[]          @relation("EventRsvps")
+  dailySteps        DailyStep[]          @relation("DailySteps")
+  dailyStepCheers   DailyStepCheer[]     @relation("DailyStepCheers")
+  dailyStepComments DailyStepComment[]   @relation("DailyStepComments")
+  challenges        Challenge[]          @relation("Challenges")
+  challengeSupports ChallengeSupport[]   @relation("ChallengeSupports")
+  podcastFavorites  PodcastFavorite[]    @relation("PodcastFavorites")
+  matchingPosts     MatchingPost[]       @relation("MatchingPosts")
+  jobApplications   JobApplication[]     @relation("JobApplications")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -377,6 +391,8 @@ model Event {
 
   deletedAt DateTime?
 
+  rsvps EventRsvp[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -447,4 +463,290 @@ model SiteSetting {
   key   String @unique // 例: "site.name", "theme.primaryColor"
   value String
   updatedAt DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────
+// IPPOS Point（ポイント制度）
+// ─────────────────────────────────────────
+model PointEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation("PointEvents", fields: [userId], references: [id], onDelete: Cascade)
+  amount    Int // マイナス値は運営による減算調整
+  reason    String // "login" | "chat_post" | "event_join" | "course_complete" | "challenge_achieved" | "admin_adjust"
+  refTable  String?
+  refId     String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// ─────────────────────────────────────────
+// チャット（コミュニティ内チャンネル）
+// ─────────────────────────────────────────
+model ChatChannel {
+  id          String        @id @default(cuid())
+  slug        String        @unique
+  name        String
+  description String?
+  sortOrder   Int           @default(0)
+  messages    ChatMessage[]
+  createdAt   DateTime      @default(now())
+}
+
+model ChatMessage {
+  id        String        @id @default(cuid())
+  channelId String
+  channel   ChatChannel   @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User          @relation("ChatMessages", fields: [authorId], references: [id], onDelete: Cascade)
+  parentId  String?
+  parent    ChatMessage?  @relation("ChatThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   ChatMessage[] @relation("ChatThread")
+  body      String
+  isPinned  Boolean       @default(false)
+  deletedAt DateTime?
+  createdAt DateTime      @default(now())
+
+  reactions ChatReaction[]
+
+  @@index([channelId, createdAt])
+}
+
+model ChatReaction {
+  messageId String
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User        @relation("ChatReactions", fields: [userId], references: [id], onDelete: Cascade)
+  emoji     String
+  createdAt DateTime    @default(now())
+
+  @@id([messageId, userId, emoji])
+}
+
+// ─────────────────────────────────────────
+// 講座（AI・心理学・農業 共通モデル）
+// ─────────────────────────────────────────
+model CourseCategory {
+  id        String   @id @default(cuid())
+  domain    String // "ai" | "psychology" | "agriculture"
+  slug      String
+  label     String
+  sortOrder Int      @default(0)
+  courses   Course[]
+
+  @@unique([domain, slug])
+}
+
+model Course {
+  id               String           @id @default(cuid())
+  domain           String // "ai" | "psychology" | "agriculture"
+  categoryId       String?
+  category         CourseCategory?  @relation(fields: [categoryId], references: [id])
+  title            String
+  description      String?
+  coverImageUrl    String?
+  isPublished      Boolean          @default(false)
+  pointsOnComplete Int              @default(20)
+  sortOrder        Int              @default(0)
+  lessons          CourseLesson[]
+  quizzes          CourseQuiz[]
+  progress         CourseProgress[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([domain, isPublished])
+}
+
+model CourseLesson {
+  id        String  @id @default(cuid())
+  courseId  String
+  course    Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title     String
+  videoUrl  String?
+  pdfUrl    String?
+  bodyHtml  String?
+  sortOrder Int     @default(0)
+}
+
+model CourseQuiz {
+  id            String @id @default(cuid())
+  courseId      String
+  course        Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  question      String
+  choicesJson   String // JSON文字列で選択肢配列を保持
+  correctIndex  Int
+  sortOrder     Int    @default(0)
+}
+
+model CourseProgress {
+  userId               String
+  user                 User      @relation("CourseProgress", fields: [userId], references: [id], onDelete: Cascade)
+  courseId             String
+  course               Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  completedLessonIds   String    @default("") // カンマ区切りのレッスンID
+  progressPercent      Int       @default(0)
+  completedAt          DateTime?
+  updatedAt            DateTime  @updatedAt
+
+  @@id([userId, courseId])
+}
+
+// ─────────────────────────────────────────
+// イベント参加（既存Eventモデルへのサイト内参加登録を追加）
+// ─────────────────────────────────────────
+model EventRsvp {
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("EventRsvps", fields: [userId], references: [id], onDelete: Cascade)
+  status    String   @default("going") // "going" | "canceled"
+  createdAt DateTime @default(now())
+
+  @@id([eventId, userId])
+}
+
+// ─────────────────────────────────────────
+// 一歩記録（日々の小さな挑戦の記録）
+// ─────────────────────────────────────────
+model DailyStep {
+  id        String             @id @default(cuid())
+  userId    String
+  user      User               @relation("DailySteps", fields: [userId], references: [id], onDelete: Cascade)
+  body      String
+  imageUrl  String?
+  createdAt DateTime           @default(now())
+  cheers    DailyStepCheer[]
+  comments  DailyStepComment[]
+
+  @@index([createdAt])
+}
+
+model DailyStepCheer {
+  stepId    String
+  step      DailyStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation("DailyStepCheers", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@id([stepId, userId])
+}
+
+model DailyStepComment {
+  id        String    @id @default(cuid())
+  stepId    String
+  step      DailyStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User      @relation("DailyStepComments", fields: [authorId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime  @default(now())
+}
+
+// ─────────────────────────────────────────
+// 挑戦宣言（今月の目標宣言と応援）
+// ─────────────────────────────────────────
+model Challenge {
+  id              String              @id @default(cuid())
+  userId          String
+  user            User                @relation("Challenges", fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  deadline        DateTime
+  progressPercent Int                 @default(0)
+  isAchieved      Boolean             @default(false)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  supports        ChallengeSupport[]
+}
+
+model ChallengeSupport {
+  challengeId String
+  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation("ChallengeSupports", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@id([challengeId, userId])
+}
+
+// ─────────────────────────────────────────
+// Podcast
+// ─────────────────────────────────────────
+model PodcastSeries {
+  id            String            @id @default(cuid())
+  title         String
+  description   String?
+  coverImageUrl String?
+  sortOrder     Int               @default(0)
+  episodes      PodcastEpisode[]
+}
+
+model PodcastEpisode {
+  id              String             @id @default(cuid())
+  seriesId        String
+  series          PodcastSeries      @relation(fields: [seriesId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  audioUrl        String
+  durationSeconds Int?
+  publishedAt     DateTime           @default(now())
+  favorites       PodcastFavorite[]
+}
+
+model PodcastFavorite {
+  episodeId String
+  episode   PodcastEpisode @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User           @relation("PodcastFavorites", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime       @default(now())
+
+  @@id([episodeId, userId])
+}
+
+// ─────────────────────────────────────────
+// マッチング（募集掲示板）
+// ─────────────────────────────────────────
+model MatchingPost {
+  id          String    @id @default(cuid())
+  authorId    String
+  author      User      @relation("MatchingPosts", fields: [authorId], references: [id], onDelete: Cascade)
+  title       String
+  category    String // "designer" | "engineer" | "farm-experience" | "co-founder" | "other"
+  description String?
+  status      String    @default("open") // "open" | "closed"
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([status, createdAt])
+}
+
+// ─────────────────────────────────────────
+// 求人
+// ─────────────────────────────────────────
+model JobPost {
+  id             String            @id @default(cuid())
+  companyName    String
+  companyLogoUrl String?
+  title          String
+  employmentType String // "intern" | "part-time" | "contract" | "full-time"
+  location       String?
+  description    String?
+  status         String            @default("pending") // "pending" | "published" | "closed"
+  createdAt      DateTime          @default(now())
+  applications   JobApplication[]
+
+  @@index([status, createdAt])
+}
+
+model JobApplication {
+  id          String   @id @default(cuid())
+  jobId       String
+  job         JobPost  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  applicantId String
+  applicant   User     @relation("JobApplications", fields: [applicantId], references: [id], onDelete: Cascade)
+  message     String?
+  status      String   @default("submitted") // "submitted" | "reviewing" | "accepted" | "rejected"
+  createdAt   DateTime @default(now())
+
+  @@index([jobId])
 }
