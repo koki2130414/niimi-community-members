@@ -20,9 +20,14 @@ export default async function AdminVideoListPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-brand-green-dark">動画管理</h1>
-        <Link href="/admin/videos/new">
-          <Button>+ 新規動画登録</Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/admin/videos/categories">
+            <Button variant="secondary">カテゴリー管理</Button>
+          </Link>
+          <Link href="/admin/videos/new">
+            <Button>+ 新規動画登録</Button>
+          </Link>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-card border border-brand-beige bg-white">

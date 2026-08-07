@@ -142,3 +142,37 @@ export async function deleteVideo(id: string) {
   await recordAdminLog({ actorId: session.user.id, action: "video.delete", targetType: "Video", targetId: id });
   revalidatePath("/admin/videos");
 }
+
+// ---------------- 動画カテゴリー管理 ----------------
+
+export async function createVideoCategory(formData: FormData) {
+  const session = await requireAdminSession();
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return;
+
+  const last = await prisma.videoCategory.findFirst({ orderBy: { sortOrder: "desc" } });
+  await prisma.videoCategory.create({ data: { name, sortOrder: (last?.sortOrder ?? 0) + 1 } });
+  await recordAdminLog({ actorId: session.user.id, action: "video_category.create", targetType: "VideoCategory", targetId: name });
+  revalidatePath("/admin/videos/categories");
+  revalidatePath("/admin/videos/new");
+}
+
+export async function renameVideoCategory(id: string, formData: FormData) {
+  const session = await requireAdminSession();
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return;
+
+  await prisma.videoCategory.update({ where: { id }, data: { name } });
+  await recordAdminLog({ actorId: session.user.id, action: "video_category.rename", targetType: "VideoCategory", targetId: id });
+  revalidatePath("/admin/videos/categories");
+}
+
+export async function deleteVideoCategory(id: string) {
+  const session = await requireAdminSession();
+  // このカテゴリーを参照している動画は「未分類」に戻す
+  await prisma.video.updateMany({ where: { categoryId: id }, data: { categoryId: null } });
+  await prisma.videoCategory.delete({ where: { id } });
+  await recordAdminLog({ actorId: session.user.id, action: "video_category.delete", targetType: "VideoCategory", targetId: id });
+  revalidatePath("/admin/videos/categories");
+  revalidatePath("/admin/videos");
+}
