@@ -5,6 +5,7 @@ import { canViewContent } from "@/lib/permissions";
 import { formatDate } from "@/lib/format";
 import { markVideoViewed, toggleVideoFavorite } from "@/lib/actions/video-actions";
 import { ContentCard } from "@/components/member/ContentCard";
+import { SecureVideoPlayer } from "@/components/member/SecureVideoPlayer";
 import { Badge } from "@/components/ui/Badge";
 
 export const dynamic = "force-dynamic";
@@ -57,14 +58,7 @@ export default async function VideoDetailPage({ params }: { params: { id: string
     <div className="space-y-6">
       <div className="aspect-video w-full overflow-hidden rounded-card bg-black">
         {video.sourceType === "upload" ? (
-          <video
-            className="h-full w-full"
-            src={`/api/videos/${video.id}/stream`}
-            controls
-            controlsList="nodownload"
-            disablePictureInPicture
-            onContextMenu={(e) => e.preventDefault()}
-          />
+          <SecureVideoPlayer src={`/api/videos/${video.id}/stream`} />
         ) : (
           <iframe
             className="h-full w-full"
