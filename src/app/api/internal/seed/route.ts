@@ -100,6 +100,7 @@ export async function GET(req: Request) {
                   create: {
                             id: `seed-video-${i + 1}`,
                             title: v.title,
+                            sourceType: "youtube",
                             youtubeUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
                             youtubeId: "dQw4w9WgXcQ",
                             description: v.desc,

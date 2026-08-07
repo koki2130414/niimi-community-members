@@ -50,7 +50,10 @@ export const memberUpdateSchema = z.object({
 
 export const videoUpsertSchema = z.object({
   title: z.string().min(1, "タイトルを入力してください").max(200),
-  youtubeUrl: z.string().url("正しいYouTube URLを入力してください"),
+  youtubeUrl: z.string().url("正しいYouTube URLを入力してください").optional().or(z.literal("")),
+  filePath: z.string().optional(),
+  fileMimeType: z.string().optional(),
+  fileSizeBytes: z.coerce.number().optional(),
   description: z.string().max(5000).optional(),
   categoryId: z.string().optional().nullable(),
   tags: z.string().max(500).optional(),

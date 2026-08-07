@@ -56,13 +56,24 @@ export default async function VideoDetailPage({ params }: { params: { id: string
   return (
     <div className="space-y-6">
       <div className="aspect-video w-full overflow-hidden rounded-card bg-black">
-        <iframe
-          className="h-full w-full"
-          src={`https://www.youtube.com/embed/${video.youtubeId}`}
-          title={video.title}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
+        {video.sourceType === "upload" ? (
+          <video
+            className="h-full w-full"
+            src={`/api/videos/${video.id}/stream`}
+            controls
+            controlsList="nodownload"
+            disablePictureInPicture
+            onContextMenu={(e) => e.preventDefault()}
+          />
+        ) : (
+          <iframe
+            className="h-full w-full"
+            src={`https://www.youtube.com/embed/${video.youtubeId}`}
+            title={video.title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        )}
       </div>
 
       <div>
@@ -88,9 +99,15 @@ export default async function VideoDetailPage({ params }: { params: { id: string
         </form>
       </div>
 
-      <p className="rounded-card border border-brand-beige bg-brand-beige/40 p-3 text-xs text-brand-green-dark">
-        ⚠️ この動画はYouTubeの限定公開機能を利用しています。URLを知っている第三者が視聴できる可能性があるため、会員限定情報の外部共有はお控えください。
-      </p>
+      {video.sourceType === "upload" ? (
+        <p className="rounded-card border border-brand-beige bg-brand-beige/40 p-3 text-xs text-brand-green-dark">
+          🔒 この動画は会員限定でサイト内配信されており、ログインしていない第三者やサイト外からは視聴できません。
+        </p>
+      ) : (
+        <p className="rounded-card border border-brand-beige bg-brand-beige/40 p-3 text-xs text-brand-green-dark">
+          ⚠️ この動画はYouTubeの限定公開機能を利用しています。URLを知っている第三者が視聴できる可能性があるため、会員限定情報の外部共有はお控えください。
+        </p>
+      )}
 
       {visibleRelated.length > 0 && (
         <VideoSection title="関連動画" videos={visibleRelated} />

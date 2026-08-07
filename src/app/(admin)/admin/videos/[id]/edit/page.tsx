@@ -27,13 +27,13 @@ export default async function AdminVideoEditPage({ params }: { params: { id: str
             submitLabel="更新する"
             defaultValues={{
               title: video.title,
-              youtubeUrl: video.youtubeUrl,
               description: video.description ?? "",
               categoryId: video.categoryId ?? "",
               tags: video.tags ?? "",
               isPublished: video.isPublished,
               isFeatured: video.isFeatured,
               allowedPlans: parseAllowedPlans(video.allowedPlans),
+              hasExistingFile: !!video.filePath,
             }}
           />
         </CardBody>

@@ -1,6 +1,8 @@
 "use client";
 
-import { useFormState, useFormStatus } from "react-dom";
+import { useState } from "react";
+import { upload } from "@vercel/blob/client";
+import { useRouter } from "next/navigation";
 import { Label, Input, Select, Textarea, FieldError } from "@/components/ui/FormField";
 import { Button } from "@/components/ui/Button";
 import { AllowedPlansCheckboxGroup } from "@/components/admin/AllowedPlansCheckboxGroup";
@@ -13,39 +15,105 @@ interface Category {
 }
 
 interface Props {
-  action: (state: VideoFormState, formData: FormData) => Promise<VideoFormState>;
+  action: (formData: FormData) => Promise<VideoFormState>;
   categories: Category[];
   defaultValues?: {
     title: string;
-    youtubeUrl: string;
     description: string;
     categoryId: string;
     tags: string;
     isPublished: boolean;
     isFeatured: boolean;
     allowedPlans: MembershipPlan[];
+    hasExistingFile: boolean;
   };
   submitLabel: string;
 }
 
-const initialState: VideoFormState = {};
-
 export function VideoForm({ action, categories, defaultValues, submitLabel }: Props) {
-  const [state, formAction] = useFormState(action, initialState);
+  const router = useRouter();
+  const [file, setFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | undefined>();
+
+  async function handleSubmit(formData: FormData) {
+    setError(undefined);
+
+    let filePath: string | undefined;
+    let fileMimeType: string | undefined;
+    let fileSizeBytes: number | undefined;
+
+    if (file) {
+      setUploading(true);
+      setProgress(0);
+      try {
+        const blob = await upload(file.name, file, {
+          access: "private",
+          handleUploadUrl: "/api/videos/upload",
+          onUploadProgress: (p) => setProgress(Math.round(p.percentage)),
+        });
+        filePath = blob.pathname;
+        fileMimeType = file.type;
+        fileSizeBytes = file.size;
+      } catch (e) {
+        setUploading(false);
+        setError("動画のアップロードに失敗しました。もう一度お試しください。");
+        return;
+      }
+      setUploading(false);
+    } else if (!defaultValues?.hasExistingFile) {
+      setError("動画ファイルを選択してください");
+      return;
+    }
+
+    if (filePath) formData.set("filePath", filePath);
+    if (fileMimeType) formData.set("fileMimeType", fileMimeType);
+    if (fileSizeBytes) formData.set("fileSizeBytes", String(fileSizeBytes));
+
+    setSubmitting(true);
+    const result = await action(formData);
+    setSubmitting(false);
+    if (result?.error) {
+      setError(result.error);
+    } else {
+      router.push("/admin/videos");
+      router.refresh();
+    }
+  }
+
+  const busy = uploading || submitting;
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form action={handleSubmit} className="space-y-4">
       <div>
         <Label htmlFor="title">タイトル</Label>
         <Input id="title" name="title" defaultValue={defaultValues?.title} required />
       </div>
+
       <div>
-        <Label htmlFor="youtubeUrl">YouTube URL（限定公開）</Label>
-        <Input id="youtubeUrl" name="youtubeUrl" defaultValue={defaultValues?.youtubeUrl} required placeholder="https://youtu.be/xxxxxxxx" />
+        <Label htmlFor="file">動画ファイル{defaultValues?.hasExistingFile ? "（変更する場合のみ選択）" : ""}</Label>
+        <input
+          id="file"
+          type="file"
+          accept="video/mp4,video/webm,video/quicktime,video/x-m4v"
+          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          className="block w-full rounded-lg border border-brand-beige px-3 py-2 text-sm text-brand-green-dark file:mr-3 file:rounded-full file:border-0 file:bg-brand-green file:px-4 file:py-1.5 file:text-xs file:font-semibold file:text-white"
+        />
         <p className="mt-1 text-xs text-brand-green-light">
-          ⚠️ YouTube限定公開動画は、URLを知っている人が閲覧できる可能性があります。機密性の高い動画には、別の動画配信サービスや署名付きURLの利用を検討してください。
+          ✅ アップロードされた動画は会員ログイン必須で配信され、サイト外（YouTube等）からは一切視聴できません。
         </p>
+        {uploading && (
+          <div className="mt-2">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-brand-beige">
+              <div className="h-full bg-brand-green transition-all" style={{ width: `${progress}%` }} />
+            </div>
+            <p className="mt-1 text-xs text-brand-green-light">アップロード中… {progress}%</p>
+          </div>
+        )}
       </div>
+
       <div>
         <Label htmlFor="description">説明文</Label>
         <Textarea id="description" name="description" rows={4} defaultValue={defaultValues?.description} />
@@ -76,17 +144,10 @@ export function VideoForm({ action, categories, defaultValues, submitLabel }: Pr
           おすすめに設定
         </label>
       </div>
-      <FieldError message={state.error} />
-      <SubmitButton label={submitLabel} />
+      <FieldError message={error} />
+      <Button type="submit" disabled={busy}>
+        {uploading ? `アップロード中… ${progress}%` : submitting ? "保存中..." : submitLabel}
+      </Button>
     </form>
-  );
-}
-
-function SubmitButton({ label }: { label: string }) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" disabled={pending}>
-      {pending ? "保存中..." : label}
-    </Button>
   );
 }

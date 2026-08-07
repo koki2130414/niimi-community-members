@@ -175,8 +175,17 @@ model Video {
   id          String   @id @default(cuid())
   title       String
   thumbnailUrl String?
-  youtubeUrl  String
-  youtubeId   String
+
+  // 配信方式: "upload"（サイト内ホスティング・会員限定） | "youtube"（従来のYouTube限定公開・非推奨）
+  sourceType  String   @default("upload")
+  youtubeUrl  String?
+  youtubeId   String?
+  // "upload" の場合、実ファイルは Vercel Blob に保存し、このパスはサーバー側でのみ使用する。
+  // クライアントには直接公開せず、/api/videos/[id]/stream 経由（会員セッション必須）でのみ配信する。
+  filePath      String?
+  fileMimeType  String?
+  fileSizeBytes Int?
+
   description String?
   tags        String? // カンマ区切り（MVPでは簡易実装。将来的にタグテーブルへ正規化可）
 
