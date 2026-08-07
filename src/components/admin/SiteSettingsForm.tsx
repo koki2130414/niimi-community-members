@@ -7,13 +7,29 @@ import { Button } from "@/components/ui/Button";
 
 const initialState: SiteSettingsFormState = {};
 
-export function SiteSettingsForm({ defaultSiteName }: { defaultSiteName: string }) {
+export function SiteSettingsForm({
+  defaultSiteName,
+  defaultSpotifyShowUrl,
+}: {
+  defaultSiteName: string;
+  defaultSpotifyShowUrl: string;
+}) {
   const [state, formAction] = useFormState(updateSiteSettings, initialState);
   return (
     <form action={formAction} className="space-y-4">
       <div>
         <Label htmlFor="siteName">サービス名</Label>
         <Input id="siteName" name="siteName" defaultValue={defaultSiteName} required />
+      </div>
+      <div>
+        <Label htmlFor="spotifyShowUrl">Podcast（Spotify番組URL）</Label>
+        <Input
+          id="spotifyShowUrl"
+          name="spotifyShowUrl"
+          defaultValue={defaultSpotifyShowUrl}
+          placeholder="https://open.spotify.com/show/xxxxxxxx"
+        />
+        <p className="mt-1 text-xs text-brand-green-light">member/podcast ページに埋め込まれるSpotify番組のURLです。</p>
       </div>
       <FieldError message={state.error} />
       {state.success && <p className="text-xs font-semibold text-brand-green">保存しました</p>}

@@ -23,3 +23,36 @@ export async function setSiteName(name: string): Promise<void> {
     create: { key: "site.name", value: name },
   });
 }
+
+// Podcast（Spotify番組の埋め込み）
+// URLごとまるごと保存し、表示側でIDを抽出する（open.spotify.com/show/xxxx?si=... の形式を許容）
+const DEFAULT_SPOTIFY_SHOW_URL = "https://open.spotify.com/show/033PE6bPNIaClUmTUWS2Yu";
+
+export async function getPodcastSpotifyShowUrl(): Promise<string> {
+  try {
+    const setting = await prisma.siteSetting.findUnique({ where: { key: "podcast.spotifyShowUrl" } });
+    return setting?.value || DEFAULT_SPOTIFY_SHOW_URL;
+  } catch {
+    return DEFAULT_SPOTIFY_SHOW_URL;
+  }
+}
+
+export async function setPodcastSpotifyShowUrl(url: string): Promise<void> {
+  await prisma.siteSetting.upsert({
+    where: { key: "podcast.spotifyShowUrl" },
+    update: { value: url },
+    create: { key: "podcast.spotifyShowUrl", value: url },
+  });
+}
+
+/** SpotifyのURLから埋め込み用のshow IDを抽出する */
+export function extractSpotifyShowId(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (!parsed.hostname.includes("spotify.com")) return null;
+    const match = parsed.pathname.match(/\/show\/([a-zA-Z0-9]+)/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
