@@ -11,6 +11,8 @@ export function SecureVideoPlayer({ src }: { src: string }) {
       className="h-full w-full"
       src={src}
       controls
+      playsInline
+      preload="metadata"
       controlsList="nodownload"
       disablePictureInPicture
       onContextMenu={(e) => e.preventDefault()}
