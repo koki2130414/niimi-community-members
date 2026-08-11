@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireMemberSession } from "@/lib/auth-helpers";
 import { Card, CardBody } from "@/components/ui/Card";
@@ -15,6 +16,8 @@ function formatRelative(date: Date) {
 }
 
 export default async function StepsPage() {
+  notFound(); // 現在この機能は非公開です
+
   const session = await requireMemberSession();
 
   const steps = await prisma.dailyStep.findMany({

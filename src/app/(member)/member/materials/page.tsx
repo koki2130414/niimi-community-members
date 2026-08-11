@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { requireMemberSession } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/db";
 import { canViewContent } from "@/lib/permissions";
@@ -6,6 +7,8 @@ import { Card, CardBody } from "@/components/ui/Card";
 export const dynamic = "force-dynamic";
 
 export default async function MaterialListPage() {
+  notFound(); // 現在この機能は非公開です
+
   const session = await requireMemberSession();
   const plan = session.user.membershipPlan;
 

@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireMemberSession } from "@/lib/auth-helpers";
@@ -9,6 +10,8 @@ export const dynamic = "force-dynamic";
 const TYPE_LABEL: Record<string, string> = { intern: "インターン", "part-time": "アルバイト", contract: "業務委託", "full-time": "正社員" };
 
 export default async function JobsListPage() {
+  notFound(); // 現在この機能は非公開です
+
   await requireMemberSession();
 
   const jobs = await prisma.jobPost.findMany({

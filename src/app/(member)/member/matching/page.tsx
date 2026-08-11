@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireMemberSession } from "@/lib/auth-helpers";
 import { Card, CardBody } from "@/components/ui/Card";
@@ -24,6 +25,8 @@ function formatRelative(date: Date) {
 }
 
 export default async function MatchingPage() {
+  notFound(); // 現在この機能は非公開です
+
   await requireMemberSession();
 
   const posts = await prisma.matchingPost.findMany({

@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireMemberSession } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/db";
@@ -9,6 +10,8 @@ import { Card, CardBody } from "@/components/ui/Card";
 export const dynamic = "force-dynamic";
 
 export default async function AnnouncementListPage() {
+  notFound(); // 現在この機能は非公開です
+
   const session = await requireMemberSession();
   const plan = session.user.membershipPlan;
 

@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 
 export const dynamic = "force-dynamic";
 
-const DOMAIN_LABEL: Record<string, string> = { ai: "AI講座", psychology: "心理学", agriculture: "農業" };
+const DOMAIN_LABEL: Record<string, string> = { ai: "AI講座" };
 
 export default async function CourseDomainPage({ params }: { params: { domain: string } }) {
   const domain = params.domain;

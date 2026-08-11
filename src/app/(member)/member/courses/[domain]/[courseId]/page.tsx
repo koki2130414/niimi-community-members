@@ -9,6 +9,8 @@ import { QuizBlock } from "@/components/member/QuizBlock";
 export const dynamic = "force-dynamic";
 
 export default async function CourseDetailPage({ params }: { params: { domain: string; courseId: string } }) {
+  if (params.domain !== "ai") notFound();
+
   const session = await requireMemberSession();
 
   const [course, lessons, quizzes, progress] = await Promise.all([

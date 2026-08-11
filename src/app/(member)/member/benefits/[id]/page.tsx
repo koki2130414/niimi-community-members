@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/Badge";
 export const dynamic = "force-dynamic";
 
 export default async function BenefitDetailPage({ params }: { params: { id: string } }) {
+  notFound(); // 現在この機能は非公開です
+
   const session = await requireMemberSession();
   const plan = session.user.membershipPlan;
 

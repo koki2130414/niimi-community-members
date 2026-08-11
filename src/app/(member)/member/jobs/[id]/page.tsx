@@ -10,6 +10,8 @@ export const dynamic = "force-dynamic";
 const TYPE_LABEL: Record<string, string> = { intern: "インターン", "part-time": "アルバイト", contract: "業務委託", "full-time": "正社員" };
 
 export default async function JobDetailPage({ params }: { params: { id: string } }) {
+  notFound(); // 現在この機能は非公開です
+
   const session = await requireMemberSession();
 
   const job = await prisma.jobPost.findUnique({ where: { id: params.id } });

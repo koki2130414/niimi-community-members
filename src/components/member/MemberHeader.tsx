@@ -5,10 +5,7 @@ const NAV_ITEMS = [
   { href: "/member", label: "ホーム" },
   { href: "/member/videos", label: "動画" },
   { href: "/member/articles", label: "ブログ" },
-  { href: "/member/benefits", label: "お得な情報" },
   { href: "/member/events", label: "イベント" },
-  { href: "/member/materials", label: "資料" },
-  { href: "/member/announcements", label: "お知らせ" },
 ];
 
 const NOTE_URL = "https://note.com/koki213";
