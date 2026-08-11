@@ -1,5 +1,6 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { del } from "@vercel/blob";
 import { prisma } from "@/lib/db";
@@ -29,7 +30,7 @@ export async function createCourse(formData: FormData): Promise<CourseFormState>
   });
   await recordAdminLog({ actorId: session.user.id, action: "course.create", targetType: "Course", targetId: course.id });
   revalidatePath("/admin/courses");
-  return {};
+  redirect(`/admin/courses/${course.id}/edit`);
 }
 
 export async function updateCourse(id: string, formData: FormData): Promise<CourseFormState> {
