@@ -9,6 +9,7 @@ const NAV_GROUPS = [
     items: [
       { href: "/admin/members", label: "会員管理", icon: "👥" },
       { href: "/admin/videos", label: "動画管理", icon: "🎬" },
+      { href: "/admin/courses", label: "講座管理", icon: "🎓" },
       { href: "/admin/articles", label: "記事管理", icon: "📝" },
       { href: "/admin/announcements", label: "お知らせ管理", icon: "📣" },
       { href: "/admin/benefits", label: "特典管理", icon: "🎁" },

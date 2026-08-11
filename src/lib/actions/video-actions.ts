@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireMemberSession } from "@/lib/auth-helpers";
 import { canViewContent } from "@/lib/permissions";
+import { awardPoints } from "@/lib/points";
 
 /** 動画視聴済みを記録する。権限がない動画には記録しない（IDの直接指定対策） */
 export async function markVideoViewed(videoId: string) {
@@ -12,11 +13,20 @@ export async function markVideoViewed(videoId: string) {
   if (!video || video.deletedAt || !video.isPublished) return;
   if (!canViewContent(session.user.membershipPlan, video.allowedPlans)) return;
 
+  const existing = await prisma.videoView.findUnique({
+    where: { userId_videoId: { userId: session.user.id, videoId } },
+  });
+
   await prisma.videoView.upsert({
     where: { userId_videoId: { userId: session.user.id, videoId } },
     update: { viewedAt: new Date() },
     create: { userId: session.user.id, videoId },
   });
+
+  // 初回視聴時のみポイントを付与する
+  if (!existing) {
+    await awardPoints(session.user.id, "video_watch", { table: "Video", id: videoId });
+  }
 }
 
 export async function toggleVideoFavorite(videoId: string) {

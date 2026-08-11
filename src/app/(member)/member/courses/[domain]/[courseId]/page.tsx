@@ -5,6 +5,7 @@ import { Card, CardBody } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { markLessonComplete } from "@/lib/actions/ippos-actions";
 import { QuizBlock } from "@/components/member/QuizBlock";
+import { SecureVideoPlayer } from "@/components/member/SecureVideoPlayer";
 
 export const dynamic = "force-dynamic";
 
@@ -61,9 +62,20 @@ export default async function CourseDetailPage({ params }: { params: { domain: s
                   <div className="flex-1">
                     <p className="text-xs font-semibold text-brand-green-light">レッスン {i + 1}</p>
                     <p className="text-sm font-bold text-brand-green-dark">{lesson.title}</p>
-                    {lesson.videoUrl && (
+                    {lesson.videoSourceType === "youtube" && lesson.youtubeId && (
                       <div className="mt-3 aspect-video overflow-hidden rounded-card bg-black">
-                        <video src={lesson.videoUrl} controls className="h-full w-full" />
+                        <iframe
+                          className="h-full w-full"
+                          src={`https://www.youtube.com/embed/${lesson.youtubeId}`}
+                          title={lesson.title}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      </div>
+                    )}
+                    {lesson.videoSourceType === "upload" && lesson.filePath && (
+                      <div className="mt-3 aspect-video overflow-hidden rounded-card bg-black">
+                        <SecureVideoPlayer src={`/api/courses/lessons/${lesson.id}/stream`} />
                       </div>
                     )}
                     {lesson.bodyHtml && <div className="prose mt-3 text-sm text-brand-green-dark" dangerouslySetInnerHTML={{ __html: lesson.bodyHtml }} />}

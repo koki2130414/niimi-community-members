@@ -111,6 +111,7 @@ function SectionMenu() {
     { href: "/member/videos", label: "動画", icon: "🎬" },
     { href: "/member/articles", label: "ブログ", icon: "📝" },
     { href: "/member/events", label: "イベント", icon: "📅" },
+    { href: "/member/checkin", label: "チェックイン", icon: "✅" },
     { href: "/member/chat", label: "チャット", icon: "💬" },
     { href: "/member/messages", label: "メッセージ", icon: "✉️" },
     { href: "/member/points", label: "ポイント", icon: "⭐" },

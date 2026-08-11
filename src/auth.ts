@@ -71,7 +71,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { userId: user.id, reason: "login", createdAt: { gte: todayStart } },
         });
         if (!alreadyAwardedToday) {
-          await prisma.pointEvent.create({ data: { userId: user.id, amount: 5, reason: "login" } });
+          await prisma.pointEvent.create({ data: { userId: user.id, amount: 1, reason: "login" } });
         }
 
         return {

@@ -13,7 +13,7 @@ export default async function AdminArticleListPage() {
   const articles = await prisma.article.findMany({
     where: { deletedAt: null },
     orderBy: { createdAt: "desc" },
-    include: { category: true },
+    include: { category: true, author: { select: { displayName: true } } },
   });
 
   return (
@@ -30,6 +30,7 @@ export default async function AdminArticleListPage() {
           <thead className="border-b border-brand-beige bg-brand-cream text-xs text-brand-green-light">
             <tr>
               <th className="p-3">タイトル</th>
+              <th className="p-3">投稿者</th>
               <th className="p-3">カテゴリー</th>
               <th className="p-3">状態</th>
               <th className="p-3" />
@@ -39,6 +40,9 @@ export default async function AdminArticleListPage() {
             {articles.map((a) => (
               <tr key={a.id} className="border-b border-brand-beige last:border-0">
                 <td className="p-3 font-medium text-brand-green-dark">{a.title}</td>
+                <td className="p-3 text-xs">
+                  {a.author ? <Badge tone="neutral">{a.author.displayName}（会員投稿）</Badge> : a.authorName || "運営"}
+                </td>
                 <td className="p-3 text-xs">{a.category?.name ?? "-"}</td>
                 <td className="p-3">
                   <Badge tone={a.isPublished ? "green" : "neutral"}>{a.isPublished ? "公開中" : "非公開"}</Badge>

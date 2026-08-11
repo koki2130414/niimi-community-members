@@ -8,6 +8,7 @@ import { requireAdminSession } from "@/lib/auth-helpers";
 import { articleUpsertSchema } from "@/lib/validators";
 import { serializeAllowedPlans, type MembershipPlan } from "@/lib/permissions";
 import { recordAdminLog } from "@/lib/admin-log";
+import { awardPoints } from "@/lib/points";
 
 export type ArticleFormState = { error?: string };
 
@@ -112,6 +113,9 @@ export async function updateArticle(id: string, _prev: ArticleFormState, formDat
 
   if (nowPublishing) {
     await recordAdminLog({ actorId: session.user.id, action: "article.publish", targetType: "Article", targetId: id });
+    if (existing?.authorId) {
+      await awardPoints(existing.authorId, "blog_post", { table: "Article", id });
+    }
   } else {
     await recordAdminLog({ actorId: session.user.id, action: "article.update", targetType: "Article", targetId: id });
   }

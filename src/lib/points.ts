@@ -2,7 +2,9 @@ import { prisma } from "@/lib/db";
 
 /** IPPOS Point の付与ルール。 */
 export const POINT_RULES = {
-  login: 5,
+  login: 1,
+  video_watch: 1,
+  blog_post: 1,
   chat_post: 3,
   event_join: 50,
   course_complete: 30,
