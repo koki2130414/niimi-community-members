@@ -43,6 +43,18 @@ export async function createCheckInPost(formData: FormData) {
 
   await prisma.checkInPost.create({ data: { authorId: session.user.id, body } });
   revalidatePath("/member/checkin");
+
+  // Slackへも通知する（Webhook未設定の場合は何もしない。失敗してもチェックイン自体は成功させる）
+  const webhookUrl = process.env.SLACK_CHECKIN_WEBHOOK_URL;
+  if (webhookUrl) {
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: `📝 *${session.user.displayName}* さんがチェックインしました\n${body}`,
+      }),
+    }).catch(() => {});
+  }
 }
 
 export async function toggleCheckInLike(postId: string) {
