@@ -12,6 +12,7 @@ const NAV_ITEMS = [
 ];
 
 const NOTE_URL = "https://note.com/koki213";
+const BOOK_STEP_URL = "https://book-step-kappa.vercel.app/home";
 
 export function MemberHeader({ siteName, displayName }: { siteName: string; displayName: string }) {
   return (
@@ -37,6 +38,14 @@ export function MemberHeader({ siteName, displayName }: { siteName: string; disp
               className="text-sm font-medium text-brand-green-dark hover:text-brand-gold"
             >
             Note
+          </a>
+          <a
+              href={BOOK_STEP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-brand-green-dark hover:text-brand-gold"
+            >
+            BOOK STEP
           </a>
         </nav>
         <div className="hidden items-center gap-3 md:flex">

@@ -154,19 +154,33 @@ function SectionMenu() {
     { href: "/member/podcast", label: "Podcast", icon: "🎙️" },
     { href: "/member/matching", label: "マッチング", icon: "🤝" },
     { href: "/member/jobs", label: "求人", icon: "💼" },
+    { href: "https://book-step-kappa.vercel.app/home", label: "BOOK STEP", icon: "📚", external: true },
   ];
   return (
     <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-      {items.map((item) => (
-        <Link
-          key={item.href}
-          href={item.href}
-          className="flex flex-col items-center gap-1 rounded-card border border-brand-beige bg-white py-3 text-xs font-semibold text-brand-green-dark hover:border-brand-gold"
-        >
-          <span className="text-xl">{item.icon}</span>
-          {item.label}
-        </Link>
-      ))}
+      {items.map((item) =>
+        item.external ? (
+          <a
+            key={item.href}
+            href={item.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-col items-center gap-1 rounded-card border border-brand-beige bg-white py-3 text-xs font-semibold text-brand-green-dark hover:border-brand-gold"
+          >
+            <span className="text-xl">{item.icon}</span>
+            {item.label}
+          </a>
+        ) : (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="flex flex-col items-center gap-1 rounded-card border border-brand-beige bg-white py-3 text-xs font-semibold text-brand-green-dark hover:border-brand-gold"
+          >
+            <span className="text-xl">{item.icon}</span>
+            {item.label}
+          </Link>
+        )
+      )}
     </div>
   );
 }
