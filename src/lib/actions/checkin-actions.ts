@@ -3,10 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireMemberSession } from "@/lib/auth-helpers";
+import { awardPoints } from "@/lib/points";
 
 export type CheckInFormState = { error?: string; success?: boolean };
 
-/** 会員がブログ記事を投稿する。承認制のため、投稿直後は非公開（管理者の承認待ち）となる。 */
+/** 会員がブログ記事を投稿する。チェックインからの投稿は即時公開される。 */
 export async function submitMemberBlogPost(
   _prev: CheckInFormState | undefined,
   formData: FormData
@@ -20,18 +21,37 @@ export async function submitMemberBlogPost(
     return { error: "タイトルと本文は必須です" };
   }
 
-  await prisma.article.create({
+  const article = await prisma.article.create({
     data: {
       title,
       bodyHtml: `<p>${bodyHtml.replace(/\n/g, "</p><p>")}</p>`,
       summary: summary || undefined,
       authorId: session.user.id,
       authorName: session.user.displayName,
-      isPublished: false,
+      isPublished: true,
+      publishedAt: new Date(),
     },
   });
 
+  await awardPoints(session.user.id, "blog_post", { table: "Article", id: article.id });
+
   revalidatePath("/member/checkin");
+  revalidatePath("/member/articles");
+  revalidatePath("/member");
+
+  // Slackの「メンバーブログ」チャンネルへ通知する（Webhook未設定の場合は何もしない）
+  const webhookUrl = process.env.SLACK_MEMBER_BLOG_WEBHOOK_URL;
+  if (webhookUrl) {
+    const preview = summary || bodyHtml.slice(0, 100);
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text: `📚 *${session.user.displayName}* さんがブログを投稿しました\n*${title}*\n${preview}`,
+      }),
+    }).catch(() => {});
+  }
+
   return { success: true };
 }
 

@@ -12,7 +12,7 @@ function SubmitButton() {
       disabled={pending}
       className="rounded-full bg-brand-green px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-green-dark disabled:opacity-60"
     >
-      {pending ? "投稿中…" : "承認をリクエストする"}
+      {pending ? "投稿中…" : "ブログを投稿する"}
     </button>
   );
 }
@@ -35,7 +35,7 @@ export function BlogSubmitForm() {
         <Textarea id="bodyHtml" name="bodyHtml" rows={8} required placeholder="改行はそのまま段落として表示されます" />
       </div>
       {state?.error && <FieldError message={state.error} />}
-      {state?.success && <p className="text-xs font-semibold text-brand-green">投稿しました。管理者の承認後に公開されます。</p>}
+      {state?.success && <p className="text-xs font-semibold text-brand-green">投稿しました！ブログに公開されました。</p>}
       <SubmitButton />
     </form>
   );

@@ -19,15 +19,16 @@ function formatRelative(date: Date) {
 export default async function CheckInPage() {
   const session = await requireMemberSession();
 
-  const [posts, myPendingArticles] = await Promise.all([
+  const [posts, myRecentArticles] = await Promise.all([
     prisma.checkInPost.findMany({
       orderBy: { createdAt: "desc" },
       take: 50,
       include: { author: { select: { displayName: true } }, likes: true },
     }),
     prisma.article.findMany({
-      where: { authorId: session.user.id, isPublished: false, deletedAt: null },
+      where: { authorId: session.user.id, deletedAt: null },
       orderBy: { createdAt: "desc" },
+      take: 5,
       select: { id: true, title: true, createdAt: true },
     }),
   ]);
@@ -46,13 +47,13 @@ export default async function CheckInPage() {
             <BlogSubmitForm />
           </CardBody>
         </Card>
-        {myPendingArticles.length > 0 && (
+        {myRecentArticles.length > 0 && (
           <div className="space-y-1.5">
-            <p className="text-xs font-semibold text-brand-green-light">承認待ちの投稿</p>
-            {myPendingArticles.map((a) => (
+            <p className="text-xs font-semibold text-brand-green-light">投稿したブログ</p>
+            {myRecentArticles.map((a) => (
               <div key={a.id} className="flex items-center justify-between rounded-lg border border-brand-beige bg-white px-3 py-2 text-sm">
                 <span className="text-brand-green-dark">{a.title}</span>
-                <Badge tone="neutral">承認待ち</Badge>
+                <Badge tone="green">公開中</Badge>
               </div>
             ))}
           </div>
