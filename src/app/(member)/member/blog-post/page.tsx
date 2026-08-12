@@ -36,7 +36,7 @@ export default async function CheckInPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-xl font-bold text-brand-green-dark">チェックイン</h1>
+        <h1 className="text-xl font-bold text-brand-green-dark">ブログ投稿</h1>
         <p className="mt-1 text-sm text-brand-green-light">日々の気づきをシェアしたり、ブログ記事を投稿したりできます。</p>
       </div>
 

@@ -42,7 +42,7 @@ export async function submitMemberBlogPost(
 
   await awardPoints(session.user.id, "blog_post", { table: "Article", id: article.id });
 
-  revalidatePath("/member/checkin");
+  revalidatePath("/member/blog-post");
   revalidatePath("/member/articles");
   revalidatePath("/member");
 
@@ -71,12 +71,12 @@ export async function createCheckInPost(formData: FormData) {
   if (!body) return;
 
   await prisma.checkInPost.create({ data: { authorId: session.user.id, body } });
-  revalidatePath("/member/checkin");
+  revalidatePath("/member/blog-post");
 
   // Slackへも通知する（Webhook未設定の場合は何もしない。失敗してもチェックイン自体は成功させる）
   const webhookUrl = process.env.SLACK_CHECKIN_WEBHOOK_URL;
   if (webhookUrl) {
-    const checkinUrl = `${SITE_URL}/member/checkin`;
+    const checkinUrl = `${SITE_URL}/member/blog-post`;
     await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -97,7 +97,7 @@ export async function toggleCheckInLike(postId: string) {
   } else {
     await prisma.checkInPostLike.create({ data: { postId, userId: session.user.id } });
   }
-  revalidatePath("/member/checkin");
+  revalidatePath("/member/blog-post");
 }
 
 export async function deleteCheckInPost(postId: string) {
@@ -105,5 +105,5 @@ export async function deleteCheckInPost(postId: string) {
   const post = await prisma.checkInPost.findUnique({ where: { id: postId } });
   if (!post || post.authorId !== session.user.id) return;
   await prisma.checkInPost.delete({ where: { id: postId } });
-  revalidatePath("/member/checkin");
+  revalidatePath("/member/blog-post");
 }
