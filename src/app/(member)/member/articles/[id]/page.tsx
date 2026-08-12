@@ -61,6 +61,17 @@ export default async function ArticleDetailPage({ params }: { params: { id: stri
 
       <div className="prose-article" dangerouslySetInnerHTML={{ __html: safeHtml }} />
 
+      {article.externalUrl && (
+        <a
+          href={article.externalUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1.5 rounded-card border border-brand-beige bg-white px-4 py-2.5 text-sm font-semibold text-brand-green-dark hover:border-brand-gold"
+        >
+          📖 note.comで元記事を読む →
+        </a>
+      )}
+
       <form action={toggleFavoriteAction}>
         <button
           type="submit"

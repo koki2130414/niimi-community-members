@@ -7,6 +7,8 @@ import { awardPoints } from "@/lib/points";
 
 export type CheckInFormState = { error?: string; success?: boolean };
 
+const SITE_URL = "https://niimi-community-members.vercel.app";
+
 /** 会員がブログ記事を投稿する。チェックインからの投稿は即時公開される。 */
 export async function submitMemberBlogPost(
   _prev: CheckInFormState | undefined,
@@ -16,9 +18,13 @@ export async function submitMemberBlogPost(
   const title = String(formData.get("title") ?? "").trim();
   const bodyHtml = String(formData.get("bodyHtml") ?? "").trim();
   const summary = String(formData.get("summary") ?? "").trim();
+  const externalUrl = String(formData.get("externalUrl") ?? "").trim();
 
   if (!title || !bodyHtml) {
     return { error: "タイトルと本文は必須です" };
+  }
+  if (externalUrl && !/^https?:\/\//.test(externalUrl)) {
+    return { error: "リンクは http:// または https:// から始まるURLを入力してください" };
   }
 
   const article = await prisma.article.create({
@@ -26,6 +32,7 @@ export async function submitMemberBlogPost(
       title,
       bodyHtml: `<p>${bodyHtml.replace(/\n/g, "</p><p>")}</p>`,
       summary: summary || undefined,
+      externalUrl: externalUrl || undefined,
       authorId: session.user.id,
       authorName: session.user.displayName,
       isPublished: true,
@@ -43,11 +50,13 @@ export async function submitMemberBlogPost(
   const webhookUrl = process.env.SLACK_MEMBER_BLOG_WEBHOOK_URL;
   if (webhookUrl) {
     const preview = summary || bodyHtml.slice(0, 100);
+    const articleUrl = `${SITE_URL}/member/articles/${article.id}`;
+    const noteLine = externalUrl ? `\n📖 note記事: ${externalUrl}` : "";
     await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        text: `📚 *${session.user.displayName}* さんがブログを投稿しました\n*${title}*\n${preview}`,
+        text: `📚 *${session.user.displayName}* さんがブログを投稿しました\n*${title}*\n${preview}${noteLine}\n🔗 アプリで見る: ${articleUrl}`,
       }),
     }).catch(() => {});
   }
@@ -67,11 +76,12 @@ export async function createCheckInPost(formData: FormData) {
   // Slackへも通知する（Webhook未設定の場合は何もしない。失敗してもチェックイン自体は成功させる）
   const webhookUrl = process.env.SLACK_CHECKIN_WEBHOOK_URL;
   if (webhookUrl) {
+    const checkinUrl = `${SITE_URL}/member/checkin`;
     await fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        text: `📝 *${session.user.displayName}* さんがチェックインしました\n${body}`,
+        text: `📝 *${session.user.displayName}* さんがチェックインしました\n${body}\n🔗 アプリで見る: ${checkinUrl}`,
       }),
     }).catch(() => {});
   }

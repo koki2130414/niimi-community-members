@@ -260,6 +260,8 @@ model Article {
   summary      String?
   tags         String?
   authorName   String?
+  // note.com等の元記事へのリンク（任意）
+  externalUrl  String?
   // 会員がチェックインページから投稿した場合の投稿者（管理者作成の場合は null）
   authorId     String?
   author       User?    @relation("ArticleAuthor", fields: [authorId], references: [id], onDelete: SetNull)
