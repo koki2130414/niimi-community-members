@@ -4,8 +4,11 @@ import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { sendPasswordResetEmail } from "@/lib/email";
+import { getSiteName } from "@/lib/site-settings";
 
 const RESET_TOKEN_TTL_MINUTES = 60;
+const SITE_URL = "https://niimi-community-members.vercel.app";
 
 const requestSchema = z.object({
   loginIdOrEmail: z.string().min(1),
@@ -14,11 +17,8 @@ const requestSchema = z.object({
 export type ResetRequestState = { message?: string; devResetUrl?: string };
 
 /**
- * パスワード再設定リクエスト。
- *
- * 注意: MVPではメール送信基盤(SES/SendGrid等)を未接続のため、
- * 開発環境では再設定用URLを画面に直接表示する。
- * 本番運用時は必ずメール送信に置き換え、URLを画面に表示しないこと。
+ * パスワード再設定リクエスト。Resend経由で実際にメールを送信する。
+ * RESEND_API_KEY が未設定の開発環境では、代わりに画面にURLを表示する。
  */
 export async function requestPasswordReset(
   _prev: ResetRequestState,
@@ -39,7 +39,7 @@ export async function requestPasswordReset(
   // アカウントの存在有無を外部から推測されないよう、常に同じメッセージを返す
   const genericMessage = "ご登録の情報が確認できた場合、パスワード再設定用のご案内をお送りしました。";
 
-  if (!user) {
+  if (!user || !user.email) {
     return { message: genericMessage };
   }
 
@@ -52,14 +52,19 @@ export async function requestPasswordReset(
     },
   });
 
-  const resetUrl = `/reset-password/${token}`;
+  const resetPath = `/reset-password/${token}`;
+  const resetUrl = `${SITE_URL}${resetPath}`;
 
-  if (process.env.NODE_ENV !== "production") {
-    // 開発環境のみ: メール送信の代わりにURLを画面表示する
-    return { message: genericMessage, devResetUrl: resetUrl };
+  if (process.env.RESEND_API_KEY) {
+    const siteName = await getSiteName();
+    await sendPasswordResetEmail({ to: user.email, resetUrl, siteName }).catch((err) => {
+      console.error("Failed to send password reset email", err);
+    });
+  } else if (process.env.NODE_ENV !== "production") {
+    // 開発環境かつメール未接続時のみ: メール送信の代わりにURLを画面表示する
+    return { message: genericMessage, devResetUrl: resetPath };
   }
 
-  // TODO(本番実装時): ここでメール送信サービスを呼び出し、resetUrlを送信する
   return { message: genericMessage };
 }
 
