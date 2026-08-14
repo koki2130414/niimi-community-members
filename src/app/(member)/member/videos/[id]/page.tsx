@@ -54,10 +54,14 @@ export default async function VideoDetailPage({ params }: { params: { id: string
     await toggleVideoFavorite(videoId);
   }
 
+  // 過去のスキーマ変更で sourceType が実態と食い違っているレコードがあるため、
+  // 実データ（filePath / youtubeUrl の有無）から実際の配信方式を判定する。
+  const effectiveSourceType = video.filePath ? "upload" : video.youtubeId ? "youtube" : video.sourceType;
+
   return (
     <div className="space-y-6">
       <div className="aspect-video w-full overflow-hidden rounded-card bg-black">
-        {video.sourceType === "upload" ? (
+        {effectiveSourceType === "upload" ? (
           <SecureVideoPlayer src={`/api/videos/${video.id}/stream`} />
         ) : (
           <iframe
@@ -93,7 +97,7 @@ export default async function VideoDetailPage({ params }: { params: { id: string
         </form>
       </div>
 
-      {video.sourceType === "upload" ? (
+      {effectiveSourceType === "upload" ? (
         <p className="rounded-card border border-brand-beige bg-brand-beige/40 p-3 text-xs text-brand-green-dark">
           🔒 この動画は会員限定でサイト内配信されており、ログインしていない第三者やサイト外からは視聴できません。
         </p>

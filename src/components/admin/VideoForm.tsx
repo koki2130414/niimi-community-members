@@ -26,12 +26,17 @@ interface Props {
     isFeatured: boolean;
     allowedPlans: MembershipPlan[];
     hasExistingFile: boolean;
+    sourceType: string;
+    youtubeUrl: string;
   };
   submitLabel: string;
 }
 
 export function VideoForm({ action, categories, defaultValues, submitLabel }: Props) {
   const router = useRouter();
+  const [sourceType, setSourceType] = useState<"youtube" | "upload">(
+    (defaultValues?.sourceType as "youtube" | "upload") ?? "upload"
+  );
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
@@ -40,37 +45,45 @@ export function VideoForm({ action, categories, defaultValues, submitLabel }: Pr
 
   async function handleSubmit(formData: FormData) {
     setError(undefined);
+    formData.set("sourceType", sourceType);
 
     let filePath: string | undefined;
     let fileMimeType: string | undefined;
     let fileSizeBytes: number | undefined;
 
-    if (file) {
-      setUploading(true);
-      setProgress(0);
-      try {
-        const blob = await upload(file.name, file, {
-          access: "private",
-          handleUploadUrl: "/api/videos/upload",
-          onUploadProgress: (p) => setProgress(Math.round(p.percentage)),
-        });
-        filePath = blob.pathname;
-        fileMimeType = file.type;
-        fileSizeBytes = file.size;
-      } catch (e) {
+    if (sourceType === "upload") {
+      if (file) {
+        setUploading(true);
+        setProgress(0);
+        try {
+          const blob = await upload(file.name, file, {
+            access: "private",
+            handleUploadUrl: "/api/videos/upload",
+            onUploadProgress: (p) => setProgress(Math.round(p.percentage)),
+          });
+          filePath = blob.pathname;
+          fileMimeType = file.type;
+          fileSizeBytes = file.size;
+        } catch (e) {
+          setUploading(false);
+          setError("動画のアップロードに失敗しました。もう一度お試しください。");
+          return;
+        }
         setUploading(false);
-        setError("動画のアップロードに失敗しました。もう一度お試しください。");
+      } else if (!defaultValues?.hasExistingFile) {
+        setError("動画ファイルを選択してください");
         return;
       }
-      setUploading(false);
-    } else if (!defaultValues?.hasExistingFile) {
-      setError("動画ファイルを選択してください");
-      return;
+      if (filePath) formData.set("filePath", filePath);
+      if (fileMimeType) formData.set("fileMimeType", fileMimeType);
+      if (fileSizeBytes) formData.set("fileSizeBytes", String(fileSizeBytes));
+    } else {
+      const youtubeUrl = String(formData.get("youtubeUrl") ?? "").trim();
+      if (!youtubeUrl) {
+        setError("YouTube URLを入力してください");
+        return;
+      }
     }
-
-    if (filePath) formData.set("filePath", filePath);
-    if (fileMimeType) formData.set("fileMimeType", fileMimeType);
-    if (fileSizeBytes) formData.set("fileSizeBytes", String(fileSizeBytes));
 
     setSubmitting(true);
     const result = await action(formData);
@@ -93,26 +106,50 @@ export function VideoForm({ action, categories, defaultValues, submitLabel }: Pr
       </div>
 
       <div>
-        <Label htmlFor="file">動画ファイル{defaultValues?.hasExistingFile ? "（変更する場合のみ選択）" : ""}</Label>
-        <input
-          id="file"
-          type="file"
-          accept="video/mp4,video/webm,video/quicktime,video/x-m4v"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className="block w-full rounded-lg border border-brand-beige px-3 py-2 text-sm text-brand-green-dark file:mr-3 file:rounded-full file:border-0 file:bg-brand-green file:px-4 file:py-1.5 file:text-xs file:font-semibold file:text-white"
-        />
-        <p className="mt-1 text-xs text-brand-green-light">
-          ✅ アップロードされた動画は会員ログイン必須で配信され、サイト外（YouTube等）からは一切視聴できません。
-        </p>
-        {uploading && (
-          <div className="mt-2">
-            <div className="h-2 w-full overflow-hidden rounded-full bg-brand-beige">
-              <div className="h-full bg-brand-green transition-all" style={{ width: `${progress}%` }} />
-            </div>
-            <p className="mt-1 text-xs text-brand-green-light">アップロード中… {progress}%</p>
-          </div>
-        )}
+        <Label>配信方式</Label>
+        <div className="flex gap-4 text-sm text-brand-green-dark">
+          <label className="flex items-center gap-1.5">
+            <input type="radio" checked={sourceType === "upload"} onChange={() => setSourceType("upload")} />
+            動画ファイルをアップロード（サイト内限定配信）
+          </label>
+          <label className="flex items-center gap-1.5">
+            <input type="radio" checked={sourceType === "youtube"} onChange={() => setSourceType("youtube")} />
+            YouTube動画を埋め込む
+          </label>
+        </div>
       </div>
+
+      {sourceType === "upload" ? (
+        <div>
+          <Label htmlFor="file">動画ファイル{defaultValues?.hasExistingFile ? "（変更する場合のみ選択）" : ""}</Label>
+          <input
+            id="file"
+            type="file"
+            accept="video/mp4,video/webm,video/quicktime,video/x-m4v"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            className="block w-full rounded-lg border border-brand-beige px-3 py-2 text-sm text-brand-green-dark file:mr-3 file:rounded-full file:border-0 file:bg-brand-green file:px-4 file:py-1.5 file:text-xs file:font-semibold file:text-white"
+          />
+          <p className="mt-1 text-xs text-brand-green-light">
+            ✅ アップロードされた動画は会員ログイン必須で配信され、サイト外（YouTube等）からは一切視聴できません。
+          </p>
+          {uploading && (
+            <div className="mt-2">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-brand-beige">
+                <div className="h-full bg-brand-green transition-all" style={{ width: `${progress}%` }} />
+              </div>
+              <p className="mt-1 text-xs text-brand-green-light">アップロード中… {progress}%</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div>
+          <Label htmlFor="youtubeUrl">YouTube URL</Label>
+          <Input id="youtubeUrl" name="youtubeUrl" defaultValue={defaultValues?.youtubeUrl} placeholder="https://www.youtube.com/watch?v=..." />
+          <p className="mt-1 text-xs text-brand-green-light">
+            ⚠️ YouTube側で限定公開設定にしていても、URLを知っている第三者はサイト外から視聴できる可能性があります。
+          </p>
+        </div>
+      )}
 
       <div>
         <Label htmlFor="description">説明文</Label>

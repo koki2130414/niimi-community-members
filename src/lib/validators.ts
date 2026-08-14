@@ -50,6 +50,7 @@ export const memberUpdateSchema = z.object({
 
 export const videoUpsertSchema = z.object({
   title: z.string().min(1, "タイトルを入力してください").max(200),
+  sourceType: z.enum(["upload", "youtube"]).optional(),
   youtubeUrl: z.string().url("正しいYouTube URLを入力してください").optional().or(z.literal("")),
   filePath: z.string().optional(),
   fileMimeType: z.string().optional(),

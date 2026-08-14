@@ -17,6 +17,7 @@ function parseAllowedPlansFromForm(formData: FormData): MembershipPlan[] {
 function parseVideoForm(formData: FormData) {
   return videoUpsertSchema.safeParse({
     title: formData.get("title"),
+    sourceType: formData.get("sourceType") || undefined,
     youtubeUrl: formData.get("youtubeUrl") || undefined,
     filePath: formData.get("filePath") || undefined,
     fileMimeType: formData.get("fileMimeType") || undefined,
@@ -86,13 +87,21 @@ export async function updateVideo(id: string, formData: FormData): Promise<Video
   const existing = await prisma.video.findUnique({ where: { id } });
   if (!existing) return { error: "動画が見つかりませんでした" };
 
+  const explicitSourceType = parsed.data.sourceType;
   const hasNewFile = !!parsed.data.filePath;
-  if (!hasNewFile && !existing.filePath && !parsed.data.youtubeUrl) {
+  if (explicitSourceType === "upload" && !hasNewFile && !existing.filePath) {
     return { error: "動画ファイルをアップロードしてください" };
   }
+  if (explicitSourceType === "youtube" && !parsed.data.youtubeUrl && !existing.youtubeUrl) {
+    return { error: "YouTube URLを入力してください" };
+  }
 
-  const sourceType = hasNewFile ? "upload" : existing.sourceType;
-  const youtubeId = parsed.data.youtubeUrl ? extractYoutubeId(parsed.data.youtubeUrl) : existing.youtubeId;
+  const sourceType = explicitSourceType ?? (hasNewFile ? "upload" : existing.sourceType);
+  const youtubeId =
+    sourceType === "youtube" && parsed.data.youtubeUrl ? extractYoutubeId(parsed.data.youtubeUrl) : existing.youtubeId;
+  if (sourceType === "youtube" && parsed.data.youtubeUrl && !youtubeId) {
+    return { error: "YouTube URLから動画IDを取得できませんでした。URLをご確認ください" };
+  }
 
   // 新しいファイルに差し替える場合、古いBlobは削除してストレージを無駄にしない
   if (hasNewFile && existing.filePath) {

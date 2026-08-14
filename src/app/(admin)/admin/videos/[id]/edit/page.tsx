@@ -16,6 +16,10 @@ export default async function AdminVideoEditPage({ params }: { params: { id: str
 
   const boundUpdateVideo = updateVideo.bind(null, video.id);
 
+  // 過去のスキーマ変更で sourceType が実態と食い違っているレコードがあるため、
+  // 実データ（filePath / youtubeUrl の有無）から正しい配信方式を推定してデフォルト表示する。
+  const inferredSourceType = video.filePath ? "upload" : video.youtubeUrl ? "youtube" : video.sourceType;
+
   return (
     <div className="max-w-lg space-y-5">
       <h1 className="text-xl font-bold text-brand-green-dark">動画編集</h1>
@@ -34,6 +38,8 @@ export default async function AdminVideoEditPage({ params }: { params: { id: str
               isFeatured: video.isFeatured,
               allowedPlans: parseAllowedPlans(video.allowedPlans),
               hasExistingFile: !!video.filePath,
+              sourceType: inferredSourceType,
+              youtubeUrl: video.youtubeUrl ?? "",
             }}
           />
         </CardBody>
