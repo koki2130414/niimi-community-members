@@ -3,8 +3,23 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { requireAdminSession } from "@/lib/auth-helpers";
+import { prisma } from "@/lib/db";
 import { setSiteName, setPodcastSpotifyShowUrl, extractSpotifyShowId } from "@/lib/site-settings";
 import { recordAdminLog } from "@/lib/admin-log";
+
+/** 全会員のポイント履歴を削除し、全員のポイントを0にリセットする。取り消せないため管理者のみ実行可能。 */
+export async function resetAllPoints() {
+  const session = await requireAdminSession();
+  const result = await prisma.pointEvent.deleteMany({});
+  await recordAdminLog({
+    actorId: session.user.id,
+    action: "points.reset_all",
+    detail: { deletedCount: result.count },
+  });
+  revalidatePath("/member", "layout");
+  revalidatePath("/member/points");
+  revalidatePath("/admin/points");
+}
 
 const schema = z.object({
   siteName: z.string().min(1, "サービス名を入力してください").max(100),

@@ -22,6 +22,7 @@ const NAV_GROUPS = [
     items: [
       { href: "/admin/chat", label: "チャット管理", icon: "💬" },
       { href: "/admin/messages", label: "メッセージ監視", icon: "🔍" },
+      { href: "/admin/points", label: "ポイント管理", icon: "⭐" },
     ],
   },
   {
