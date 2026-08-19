@@ -7,6 +7,7 @@ import { requireAdminSession } from "@/lib/auth-helpers";
 import { videoUpsertSchema, extractYoutubeId } from "@/lib/validators";
 import { serializeAllowedPlans, type MembershipPlan } from "@/lib/permissions";
 import { recordAdminLog } from "@/lib/admin-log";
+import { notifyContentUpdate } from "@/lib/slack-content-notify";
 
 export type VideoFormState = { error?: string };
 
@@ -72,6 +73,13 @@ export async function createVideo(formData: FormData): Promise<VideoFormState> {
     await recordAdminLog({ actorId: session.user.id, action: "video.publish", targetType: "Video", targetId: video.id });
   }
 
+  await notifyContentUpdate({
+    emoji: "🎬",
+    label: parsed.data.isPublished ? "新しい動画が公開されました" : "新しい動画が登録されました（下書き）",
+    title: video.title,
+    path: `/member/videos/${video.id}`,
+  });
+
   revalidatePath("/admin/videos");
   return {};
 }
@@ -135,6 +143,13 @@ export async function updateVideo(id: string, formData: FormData): Promise<Video
   } else {
     await recordAdminLog({ actorId: session.user.id, action: "video.update", targetType: "Video", targetId: id });
   }
+
+  await notifyContentUpdate({
+    emoji: "🎬",
+    label: nowPublishing ? "動画が公開されました" : "動画が更新されました",
+    title: parsed.data.title,
+    path: `/member/videos/${id}`,
+  });
 
   revalidatePath("/admin/videos");
   revalidatePath(`/admin/videos/${id}/edit`);

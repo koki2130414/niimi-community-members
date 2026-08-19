@@ -8,6 +8,7 @@ import { requireAdminSession } from "@/lib/auth-helpers";
 import { serializeAllowedPlans, type MembershipPlan } from "@/lib/permissions";
 import { extractYoutubeId } from "@/lib/validators";
 import { recordAdminLog } from "@/lib/admin-log";
+import { notifyContentUpdate } from "@/lib/slack-content-notify";
 
 export type CourseFormState = { error?: string };
 
@@ -29,6 +30,14 @@ export async function createCourse(formData: FormData): Promise<CourseFormState>
     },
   });
   await recordAdminLog({ actorId: session.user.id, action: "course.create", targetType: "Course", targetId: course.id });
+
+  await notifyContentUpdate({
+    emoji: "🎓",
+    label: course.isPublished ? "新しい講座が公開されました" : "新しい講座が登録されました（下書き）",
+    title: course.title,
+    path: `/member/courses/${course.domain}/${course.id}`,
+  });
+
   revalidatePath("/admin/courses");
   redirect(`/admin/courses/${course.id}/edit`);
 }
@@ -38,16 +47,28 @@ export async function updateCourse(id: string, formData: FormData): Promise<Cour
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return { error: "タイトルを入力してください" };
 
-  await prisma.course.update({
+  const existing = await prisma.course.findUnique({ where: { id } });
+  const isPublished = formData.get("isPublished") === "on";
+  const nowPublishing = isPublished && existing && !existing.isPublished;
+
+  const updated = await prisma.course.update({
     where: { id },
     data: {
       title,
       description: String(formData.get("description") ?? ""),
-      isPublished: formData.get("isPublished") === "on",
+      isPublished,
       pointsOnComplete: Number(formData.get("pointsOnComplete") ?? 20),
     },
   });
   await recordAdminLog({ actorId: session.user.id, action: "course.update", targetType: "Course", targetId: id });
+
+  await notifyContentUpdate({
+    emoji: "🎓",
+    label: nowPublishing ? "講座が公開されました" : "講座が更新されました",
+    title,
+    path: `/member/courses/${updated.domain}/${id}`,
+  });
+
   revalidatePath("/admin/courses");
   revalidatePath(`/admin/courses/${id}/edit`);
   return {};
@@ -101,6 +122,17 @@ export async function createLesson(courseId: string, formData: FormData): Promis
     },
   });
   await recordAdminLog({ actorId: session.user.id, action: "lesson.create", targetType: "Course", targetId: courseId });
+
+  const course = await prisma.course.findUnique({ where: { id: courseId } });
+  if (course) {
+    await notifyContentUpdate({
+      emoji: "🎓",
+      label: `講座「${course.title}」に新しいレッスンが追加されました`,
+      title,
+      path: `/member/courses/${course.domain}/${courseId}`,
+    });
+  }
+
   revalidatePath(`/admin/courses/${courseId}/edit`);
   return {};
 }
