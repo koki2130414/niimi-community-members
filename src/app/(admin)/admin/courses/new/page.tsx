@@ -21,6 +21,7 @@ export default async function AdminCourseNewPage() {
               <Label htmlFor="domain">分野</Label>
               <Select id="domain" name="domain" defaultValue="ai">
                 <option value="ai">AI講座</option>
+                <option value="business">ビジネス講座</option>
                 <option value="psychology">心理学</option>
                 <option value="agriculture">農業</option>
               </Select>

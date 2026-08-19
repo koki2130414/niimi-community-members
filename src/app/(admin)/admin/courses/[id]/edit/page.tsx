@@ -11,7 +11,7 @@ import { LessonForm } from "@/components/admin/LessonForm";
 
 export const dynamic = "force-dynamic";
 
-const DOMAIN_LABEL: Record<string, string> = { ai: "AI講座", psychology: "心理学", agriculture: "農業" };
+const DOMAIN_LABEL: Record<string, string> = { ai: "AI講座", business: "ビジネス講座", psychology: "心理学", agriculture: "農業" };
 
 export default async function AdminCourseEditPage({ params }: { params: { id: string } }) {
   await requireAdminSession();

@@ -10,7 +10,7 @@ import { SecureVideoPlayer } from "@/components/member/SecureVideoPlayer";
 export const dynamic = "force-dynamic";
 
 export default async function CourseDetailPage({ params }: { params: { domain: string; courseId: string } }) {
-  if (params.domain !== "ai") notFound();
+  if (params.domain !== "ai" && params.domain !== "business") notFound();
 
   const session = await requireMemberSession();
 

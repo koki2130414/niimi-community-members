@@ -116,6 +116,7 @@ function SectionMenu() {
     { href: "/member/messages", label: "メッセージ", icon: "✉️" },
     { href: "/member/points", label: "ポイント", icon: "⭐" },
     { href: "/member/courses/ai", label: "AI講座", icon: "🤖" },
+    { href: "/member/courses/business", label: "ビジネス講座", icon: "💼" },
     { href: "/member/challenges", label: "挑戦宣言", icon: "🎯" },
     { href: "/member/podcast", label: "Podcast", icon: "🎙️" },
     { href: "https://book-step-kappa.vercel.app/home", label: "BOOK STEP", icon: "📚", external: true },
